@@ -32,28 +32,17 @@ class Car:
         local_target_norm = local_target.normalized()
         try:
             vel_towards_target = self.velocity.dot(local_target_norm) / local_target_norm.dot(local_target_norm)
+            # print("Velocity to target: (", vel_towards_target.x, ", ", vel_towards_target.y, ", ", vel_towards_target.z, ")")
         except ZeroDivisionError:  # On target
             vel_towards_target = math.inf
         return vel_towards_target
 
     def get_drive_values(self, target):
-        local_target = self.view_target(target)
+        local_target = self.view_target(target - self.location)
         local_target_norm = local_target.normalized()
         turn_angle = math.atan2(local_target_norm.y, local_target_norm.x)
-        try:
-            # print(local_target.x, local_target.y, local_target.z)
-            angle_sign = -1 if turn_angle < 0 else 1
-            if self.is_turn_doable(700, turn_angle, local_target):
-                return clamp(turn_angle), 1
-            else:
-                vel_towards_target = self.velocity.dot(local_target_norm) / local_target_norm.dot(local_target_norm)
-                if self.is_turn_doable(vel_towards_target, turn_angle, local_target):
-                     print("WHERE AM I STUCK")
-                     return clamp(turn_angle), clamp(vel_towards_target)
-                return 0, 1
-        except ZeroDivisionError as e:  # On target
-            print(e)
-            return 0, 1
+        print("turn angle: ", turn_angle)
+        return turn_angle, clamp(self.velocity.flat().length())
 
     def is_turn_doable(self, speed, turn_angle, local_target):
         turn_rad = turn_radius(speed)
@@ -76,9 +65,11 @@ class Car:
                 vel_towards_target = self.velocity.dot(local_target_norm) /  local_target_norm.dot(local_target_norm)
                 # print(vel_towards_target)
             except ZeroDivisionError: # On target
+                print("CLOSEST CAR ERRE")
                 vel_towards_target = 0
 
-            if vel_towards_target > max_vel_to_target and local_target_dist < min_distance:
+            # if vel_towards_target > max_vel_to_target:
+            if local_target_dist < min_distance and vel_towards_target > max_vel_to_target:
                 max_vel_to_target = vel_towards_target
                 min_distance = local_target_dist
                 ret = loc
@@ -86,6 +77,7 @@ class Car:
             #     max_vel_to_target = vel_towards_target
             #     min_distance = local_target_dist
             #     ret = loc
+        print("Target: (", ret.x, ", ", ret.y, ", ", ret.z, ")")
         return ret
 
 
