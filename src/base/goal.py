@@ -1,4 +1,4 @@
-from src.util import Vec3
+from util import Vec3
 
 class Goal:
     def __init__(self, team):
