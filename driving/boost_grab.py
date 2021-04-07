@@ -25,10 +25,11 @@ class BoostGrab(Mechanic):
                 if not self.boost:
                     self.boost = pad
         # Bail is finished, no boost passed, or boost no longer active
-        if self.finished or (not self.boost or not self.boost.is_active):
+        if self.finished or (not self.boost):
             return SimpleControllerState()
         target = self.boost.location
         self.controls = drive_to_target(car, target.flat(), controls=self.controls)
         if car.local(target-car.location).length() < 100 or not self.boost.is_active:
+            print("Grabbed boost!")
             self.finished = True
         return self.controls

@@ -30,3 +30,4 @@ def drive_to_target(car: Car, target: Vec3, controls=None, speed=MAX_BOOST_SPEED
     if abs(steer_direction) > 2.3:
         controls.handbrake = True
     return controls
+

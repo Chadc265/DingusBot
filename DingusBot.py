@@ -10,6 +10,7 @@ from base.mechanic import MechanicChain
 from driving.drive import drive_to_target
 from driving.kickoff import BaseKickoff
 from driving.boost_grab import BoostGrab
+from driving.ballchase import Ballchase
 from util.vec import Vec3
 from util.boost import Boost, BoostTracker
 
@@ -72,13 +73,18 @@ class Dingus(BaseAgent):
         self.preprocess(packet)
         # self.debug_closest_boost(packet)
         # return SimpleControllerState()
+
+        if self.current_action is not None and self.current_action.finished:
+            self.increment_state()
+
         if self.is_kickoff() and self.ready_for_kickoff:
             self.future_actions = []
             self.current_action = MechanicChain(mechanic=[BaseKickoff(), BoostGrab(boost_tracker=self.boost_tracker)])
             self.ready_for_kickoff = False
 
-        if self.current_action is not None and self.current_action.finished:
-            self.increment_state()
+        # Nothing to do
+        if not self.current_action and len(self.future_actions) < 1:
+            self.current_action = MechanicChain(mechanic=Ballchase(self.ball.last_touch_time))
 
         if self.current_action is not None:
             return self.current_action.execute(packet, car=self.me, ball=self.ball)
@@ -86,7 +92,8 @@ class Dingus(BaseAgent):
         else:
             return SimpleControllerState()
 
-
+    def make_a_plan(self):
+        pass
 
 
 

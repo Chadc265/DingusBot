@@ -20,7 +20,9 @@ MAX_ANGULAR_VELOCITY = 5.5 # rad/s
 
 # World
 GRAVITY = 650
-FIELD = {}
+FIELD_MAX_X = 4096
+FIELD_MAX_Y = 5120
+FIELD_MAX_Z = 2044
 
 # Ball
 BALL_RADIUS = 92.75
@@ -34,3 +36,4 @@ MIN_PITCH = -math.pi / 2
 MAX_PITCH = math.pi / 2
 MIN_YAW_ROLL = -math.pi
 MAX_YAW_ROLL = math.pi
+dt = 1/120

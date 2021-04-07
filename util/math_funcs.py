@@ -1,16 +1,33 @@
 import math
+from util.constants import *
+from util.vec import Vec3
+
+# Mostly from Gosling utils and PythonExample
 
 def clamp(val, minimum=-1, maximum=1):
     return min(max(minimum, val), maximum)
 
+def clamp_in_field(location:Vec3):
+    ret = Vec3(clamp(location.x, -FIELD_MAX_X, FIELD_MAX_X),
+               clamp(location.y, -FIELD_MAX_Y, FIELD_MAX_Y),
+               clamp(location.z, -FIELD_MAX_Z, FIELD_MAX_Z))
+    return ret
+
+def quadratic(a,b,c):
+    #Returns the two roots of a quadratic
+    inside = math.sqrt((b*b) - (4*a*c))
+    if a != 0:
+        return (-b + inside)/(2*a),(-b - inside)/(2*a)
+    else:
+        return -1,-1
+
 def lerp(a, b, t):
     return (1 - t) * a + t * b
-
 
 def inv_lerp(a, b, v):
     return a if b - a == 0 else (v - a) / (b - a)
 
-# turn_radius and curvature shamelessly taken from https://github.com/RLBot/RLBot/wiki/Useful-Game-Values like a good programmer
+# turn_radius and curvature taken from https://github.com/RLBot/RLBot/wiki/Useful-Game-Values like a dirty little programmer
 def turn_radius(v):
     if v == 0:
         return 0

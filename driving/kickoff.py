@@ -17,4 +17,5 @@ class BaseKickoff(Mechanic):
         if car.local(target-car.location).length() < 650:
             self.controls.jump = True
             self.finished = True
+            print("Kicked off")
         return self.controls
