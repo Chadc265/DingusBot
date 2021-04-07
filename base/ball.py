@@ -1,4 +1,5 @@
-from util import Vec3, Orientation, relative_location
+from util.vec import Vec3
+from util.orientation import Orientation
 from rlbot.utils.structures.game_data_struct import GameTickPacket, Rotator
 
 class Ball:

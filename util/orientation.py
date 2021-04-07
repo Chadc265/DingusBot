@@ -1,6 +1,6 @@
 import math
 
-from .vec import Vec3
+from util.vec import Vec3
 
 # Shoutout RLBotPythonExample
 # This is a helper class for calculating directions relative to your car. You can extend it or delete if you want.
@@ -24,8 +24,14 @@ class Orientation:
         sy = math.sin(self.yaw)
 
         self.forward = Vec3(cp * cy, cp * sy, sp)
-        self.right = Vec3(cy*sp*sr-cr*sy, sy*sp*sr+cr*cy, -cp*sr)
+        self.left = Vec3(cy*sp*sr-cr*sy, sy*sp*sr+cr*cy, -cp*sr)
         self.up = Vec3(-cr*cy*sp-sr*sy, -cr*sy*sp+sr*cy, cp*cr)
+
+    def dot(self, vector: Vec3):
+        x = self.forward.dot(vector)
+        y = self.left.dot(vector)
+        z = self.up.dot(vector)
+        return Vec3(x, y, z)
 
 
 # Sometimes things are easier, when everything is seen from your point of view.
@@ -41,6 +47,6 @@ def relative_location(center: Vec3, ori: Orientation, target: Vec3) -> Vec3:
     * z: how far above
     """
     x = (target - center).dot(ori.forward)
-    y = (target - center).dot(ori.right)
+    y = (target - center).dot(ori.left)
     z = (target - center).dot(ori.up)
     return Vec3(x, y, z)
