@@ -12,6 +12,7 @@ BREAK_ACCELERATION = -3500.0
 COAST_ACCELERATION = -525.0
 JUMP_VEL_INCREASE = 291.667 # Instantaneous velocity increase through roof
 JUMP_HOLD_ACCELERATION = 1458.3
+MAX_FIRST_JUMP_HOLD = 0.2 # seconds to hold button for first jump
 DODGE_THRESHOLD = 1.25 # seconds from releasing first jump
 MAX_YAW_ACCELERATION = 9.11 # rad/s^2
 MAX_PITCH_ACCELERATION = 12.46 # rad/s^2
