@@ -13,6 +13,12 @@ def clamp_in_field(location:Vec3):
                clamp(location.z, -FIELD_MAX_Z, FIELD_MAX_Z))
     return ret
 
+def clamp_vecs(vec: Vec3, left:Vec3, right:Vec3):
+    x = clamp(vec.x, left.x, right.x)
+    y = clamp(vec.y, left.y, right.y)
+    z = clamp(vec.z, left.z, right.z)
+    return Vec3(x, y, z)
+
 def quadratic(a,b,c):
     #Returns the two roots of a quadratic
     inside = math.sqrt((b*b) - (4*a*c))

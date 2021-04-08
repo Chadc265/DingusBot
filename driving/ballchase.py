@@ -10,26 +10,25 @@ from util.vec import Vec3
 import math
 
 class Ballchase(Mechanic):
-    def __init__(self, last_touch_time, with_the_quickness=False):
+    def __init__(self, last_touch_time, ball_prediction: BallPrediction=None, with_the_quickness=False):
         super().__init__()
         self.last_touch_time = last_touch_time
         self.with_the_quickness = with_the_quickness
-        # self.ball_prediction = ball_prediction
-
+        self.ball_prediction = ball_prediction
+        print("BALLCHASE INITIATED...SOMEWHERE...SOMETIME IN THE FUTURE")
 
     def run(self, car: Car=None, ball: Ball=None) -> SimpleControllerState:
-        print(self.finished)
         if self.finished:
+            print("Ballchasing is exhausting. I'm over it")
             return SimpleControllerState()
         target = ball.location
-        print(target.x, target.y, target.z)
         # self.target, time_to = car.intersects(ball)
         # if not self.target:
         #     print("Couldn't find an intersection")
         #     self.target = ball.location
         self.controls = drive_to_target(car, target, controls=self.controls)
         if car.local(target-car.location).length() < 100 or self.last_touch_time != ball.last_touch_time:
-            print("Someone touched the ball")
+            print("Someone touched the ball!")
             self.finished = True
         if self.with_the_quickness:
             self.controls.boost = True

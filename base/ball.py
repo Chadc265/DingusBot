@@ -11,6 +11,10 @@ class Ball:
         self.last_touch_normal = Vec3(0, 0, 0)
         self.dt = 0
 
+    @property
+    def side(self):
+        return 1 if self.location.x > 0 else -1
+
     def update(self, packet: GameTickPacket):
         self.location = Vec3(packet.game_ball.physics.location)
         self.rotation = packet.game_ball.physics.rotation

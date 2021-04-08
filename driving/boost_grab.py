@@ -9,27 +9,53 @@ from util.vec import Vec3
 from util.boost import BoostTracker, Boost
 
 class BoostGrab(Mechanic):
-    def __init__(self, boost:Boost=None, boost_tracker:BoostTracker=None):
+    def __init__(self, boost:Boost=None, boost_tracker:BoostTracker=None, only_in_path=False, max_time_to_boost=None):
         super().__init__()
         self.boost = boost
+        self.pad = None
         self.boost_tracker = boost_tracker
+        self.in_path = only_in_path
+        self.max_time = max_time_to_boost
+        self.target = None
+        if self.boost is not None:
+            self.target = Vec3(self.boost.location)
 
     def update(self, packet: GameTickPacket):
         if self.boost is not None:
             self.boost.update(packet)
 
-    def run(self, car: Car=None, ball: Ball=None) -> SimpleControllerState:
-        if not self.boost and self.boost_tracker is not None:
-            if not car.flying:
-                self.boost, pad = car.get_closest_boosts(self.boost_tracker)
+    def initialize_target_boost(self, car:Car):
+        if not car.flying:
+            if not self.max_time:
+                self.boost, self.pad = car.get_closest_boosts(self.boost_tracker, self.in_path)
                 if not self.boost:
-                    self.boost = pad
-        # Bail is finished, no boost passed, or boost no longer active
+                    self.boost = self.pad
+            else:
+                self.boost, self.pad, times = car.get_closest_boosts(self.boost_tracker, in_current_path=self.in_path,
+                                                                     path_angle_limit=0, return_time_to=True)
+                # No boost reachable. Life sucks
+                if times[0] >= self.max_time and times[1] >= self.max_time:
+                    return False
+                if times[1] < self.max_time:
+                    self.boost = self.pad
+            print("Boost target acquired!")
+            self.target = Vec3(self.boost.location)
+            return True
+
+    def run(self, car: Car=None, ball: Ball=None) -> SimpleControllerState:
+        if self.finished:
+            return SimpleControllerState()
+        if not self.boost and self.boost_tracker is not None:
+            if not self.initialize_target_boost(car):
+                self.finished = True
+
+        # Bail if finished, no boost passed, or boost no longer active
         if self.finished or (not self.boost):
             return SimpleControllerState()
-        target = self.boost.location
-        self.controls = drive_to_target(car, target.flat(), controls=self.controls)
-        if car.local(target-car.location).length() < 100 or not self.boost.is_active:
+        self.controls = drive_to_target(car, self.target.flat(), controls=self.controls)
+
+        # finished if close enough, boost taken, or car got enough along the way
+        if (car.local(self.target-car.location).length() < 100 or not self.boost.is_active) or car.boost > 99:
             print("Grabbed boost!")
             self.finished = True
         return self.controls

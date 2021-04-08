@@ -23,23 +23,44 @@ A mechanic chain can only be created from mechanics with the same arguments.
 If a new argument is required, it must be in a separate chain
 """
 class MechanicChain:
-    def __init__(self, mechanic:Mechanic=None):
+    def __init__(self, mechanic_list=None):
         self.finished = True
         self.mechanics = []
-        if mechanic is not None:
+        self.current = None
+        self.interrupt_now = False
+        self.interrupt_after_current = False
+        if mechanic_list is not None:
             self.finished = False
-            if isinstance(mechanic, list):
-                self.mechanics = mechanic[::-1]
+            if isinstance(mechanic_list, list):
+                if len(mechanic_list) > 1:
+                    self.mechanics = mechanic_list[::-1]
+                else:
+                    self.mechanics = mechanic_list
+                self.current = self.mechanics[-1]
+                del self.mechanics[-1]
             else:
-                self.mechanics.append(mechanic)
+                raise TypeError("Input 'mechanic_list' must be list type")
+
+    def get_chain_names(self):
+        ret = [self.current.__class__.__name__]
+        ret.extend([m.__class__.__name__ for m in self.mechanics])
+        return ret
 
     def execute(self, packet:GameTickPacket, **kwargs) -> SimpleControllerState:
-        if len(self.mechanics) < 1:
+        if self.current.finished:
+            if len(self.mechanics) > 0:
+                self.current = self.mechanics[-1]
+                del self.mechanics[-1]
+            else:
+                self.current = None
+        if (len(self.mechanics) < 1 and self.current is None) or self.interrupt_now:
             self.finished = True
             return SimpleControllerState()
-        self.mechanics[-1].update(packet)
-        controls = self.mechanics[-1].run(**kwargs)
-        if self.mechanics[-1].finished:
-            del self.mechanics[-1]
+
+        if self.interrupt_after_current:
+            self.mechanics = []
+
+        self.current.update(packet)
+        controls = self.current.run(**kwargs)
         return controls
 

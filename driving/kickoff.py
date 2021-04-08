@@ -8,6 +8,7 @@ class BaseKickoff(Mechanic):
     def __init__(self, ball_center_offset:Vec3 = Vec3(0, 150, 0)):
         super().__init__()
         self.ball_center_offset = ball_center_offset
+        print("kickoff locked and loaded")
 
     def run(self, car: Car=None, ball: Ball=None) -> SimpleControllerState:
         if self.finished:

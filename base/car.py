@@ -4,6 +4,7 @@ from util.math_funcs import turn_radius, clamp
 from util import constants
 from util.boost import Boost, BoostTracker
 from base.ball import Ball
+from base.goal import Goal
 from rlbot.utils.structures.game_data_struct import GameTickPacket, BoostPad, PlayerInfo
 import math
 
@@ -28,13 +29,37 @@ class Car:
             self.update(packet)
 
     @property
+    def forward(self):
+        return self.orientation.forward
+
+    @property
+    def right(self):
+        return self.orientation.right
+
+    @property
+    def up(self):
+        return self.orientation.up
+
+    @property
     def side(self):
         return 1 if self.team == 1 else -1
+
+    @property
+    def speed(self):
+        return self.velocity.length()
+
+    def onside(self, ball_location, threshold=350):
+        goal_location = Vec3(0, self.team*5120, 0)
+        goal_to_ball = (ball_location - goal_location).normalized()
+        ball_dist = (ball_location - goal_location).length()
+        goal_to_car = self.location - goal_location
+        car_dist = goal_to_ball.dot(goal_to_car)
+        return car_dist - threshold < ball_dist
 
     def local(self, target):
         return self.orientation.dot(target)
 
-    def local_velocity(self, target):
+    def velocity_to_target(self, target):
         local_target = self.local(target - self.location)
         local_target_norm = local_target.normalized()
         try:
@@ -44,31 +69,23 @@ class Car:
             vel_towards_target = math.inf
         return vel_towards_target
 
-    def intersects(self, ball:Ball):
-        diff = ball.location.flat() - self.location.flat()
-        distance = diff.length()
-        direction = math.atan2(diff.y, diff.x)
-        ball_direction = math.atan2(ball.location.y, ball.location.x)
-        alpha = math.pi + direction - ball_direction
-        ball_speed = ball.velocity.flat().length()
-        car_speed = self.velocity.flat().length()
-        if ball_speed == car_speed:
-            if math.cos(alpha) < 0:
-                return None, None
-            return (direction + alpha) % (math.pi/2)
-        a = car_speed ** 2 - ball_speed ** 2
-        b = 2 * distance * ball_speed * math.cos(alpha)
-        c = -(distance ** 2)
-        discrim = (b ** 2) - (4 * a * c)
-        if discrim < 0:
-            return None, None
-        time = (math.sqrt(discrim) / b) / (2 * a)
-        x = ball.location.x + ball_speed * time * math.cos(direction)
-        y = ball.location.y + ball_speed * time * math.sin(direction)
-        intersect_diff = Vec3(x, y, 0) - self.location.flat()
-        return Vec3(x, y, 0), time
+    def is_facing_target(self, target, return_angle=False):
+        local_target = self.local(target)
+        angle = local_target.dot(self.forward)
+        if angle > 0:
+            if return_angle:
+                return True, angle
+            return True
+        if return_angle:
+            return False, angle
+        return False
 
-    def get_closest_boosts(self, boosts:BoostTracker):
+    def time_to_target(self, target):
+        current_speed_to_target = self.velocity_to_target(target)
+        distance = target - self.location
+        return distance / current_speed_to_target
+
+    def get_closest_boosts(self, boosts:BoostTracker, in_current_path=False, path_angle_limit=0, return_time_to=False):
         all_boosts = boosts.all_boost
         car_location = self.location
         closest_bean = None
@@ -77,14 +94,23 @@ class Car:
         fallback_distance = math.inf
 
         for b in all_boosts:
-            test = (b.location - car_location).length()
-            if test < closest_distance and (b.is_full_boost and b.is_active):
-                closest_bean = b
-                closest_distance = test
-            elif test < fallback_distance and b.is_active:
-                fallback_pad = b
-                fallback_distance = test
-        return closest_bean, fallback_pad
+            if not in_current_path or (in_current_path and self.is_facing_target(b.location)):
+                test = (b.location - car_location).length()
+                if test < closest_distance and (b.is_full_boost and b.is_active):
+                    closest_bean = b
+                    closest_distance = test
+                elif test < fallback_distance and b.is_active:
+                    fallback_pad = b
+                    fallback_distance = test
+        if return_time_to:
+            return (closest_bean,
+                    fallback_pad,
+                    (closest_distance / self.velocity_to_target(closest_bean.location),
+                     fallback_distance / self.velocity_to_target(fallback_pad.location)
+                     )
+                    )
+        else:
+            return closest_bean, fallback_pad
 
     def update_jump_timer(self, packet_jumped, packed_doubled, dt):
         # jump hasn't registered until now or we used a dodge or its too damn late, make sure timer is zero
@@ -108,14 +134,27 @@ class Car:
         self.double_jumped = packet_car.double_jumped
         self.boost = packet_car.boost
 
-    @property
-    def forward(self):
-        return self.orientation.forward
 
-    @property
-    def right(self):
-        return self.orientation.right
-
-    @property
-    def up(self):
-        return self.orientation.up
+    # def intersects(self, ball:Ball):
+    #     diff = ball.location.flat() - self.location.flat()
+    #     distance = diff.length()
+    #     direction = math.atan2(diff.y, diff.x)
+    #     ball_direction = math.atan2(ball.location.y, ball.location.x)
+    #     alpha = math.pi + direction - ball_direction
+    #     ball_speed = ball.velocity.flat().length()
+    #     car_speed = self.velocity.flat().length()
+    #     if ball_speed == car_speed:
+    #         if math.cos(alpha) < 0:
+    #             return None, None
+    #         return (direction + alpha) % (math.pi/2)
+    #     a = car_speed ** 2 - ball_speed ** 2
+    #     b = 2 * distance * ball_speed * math.cos(alpha)
+    #     c = -(distance ** 2)
+    #     discrim = (b ** 2) - (4 * a * c)
+    #     if discrim < 0:
+    #         return None, None
+    #     time = (math.sqrt(discrim) / b) / (2 * a)
+    #     x = ball.location.x + ball_speed * time * math.cos(direction)
+    #     y = ball.location.y + ball_speed * time * math.sin(direction)
+    #     intersect_diff = Vec3(x, y, 0) - self.location.flat()
+    #     return Vec3(x, y, 0), time

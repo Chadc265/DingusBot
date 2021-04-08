@@ -1,5 +1,6 @@
 from rlbot.utils.structures.game_data_struct import GameTickPacket, FieldInfoPacket, BoostPad, BoostPadState
 from util.vec import Vec3
+from util.constants import *
 class Boost:
     def __init__(self, boost_pad: BoostPad, index:int):
         self.index = index
@@ -21,6 +22,13 @@ class BoostTracker:
     @property
     def beans(self):
         return [b for b in self.all_boost if b.is_full_boost]
+
+    def get_back_boost(self, y_sign, x_sign):
+        for x in self.beans:
+            # print(x_sign, x.location.x, x_sign*BACK_BOOST_X, y_sign, x.location.y, y_sign*BACK_BOOST_Y)
+            if x.location.x == x_sign*BACK_BOOST_X and x.location.y == y_sign*BACK_BOOST_Y:
+                return x
+        return None
 
     def initialize_all_boost(self, field_info: FieldInfoPacket):
         self.all_boost = [Boost(field_info.boost_pads[i], i) for i in range(field_info.num_boosts)]

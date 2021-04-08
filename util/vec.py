@@ -1,6 +1,5 @@
 import math
 from typing import Union
-
 from rlbot.utils.structures.game_data_struct import Vector3
 
 # Shoutout RLBotPythonExample

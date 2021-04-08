@@ -10,7 +10,6 @@ def get_steer(car: Car, target: Vec3):
     local_target = car.local(target)
     local_target_norm = local_target.normalized()
     turn_angle = math.atan2(local_target_norm.y, local_target_norm.x)
-    print("turn angle: ", turn_angle)
     return turn_angle
 
 def is_turn_doable(speed, turn_angle, local_target):
@@ -23,7 +22,6 @@ def drive_to_target(car: Car, target: Vec3, controls=None, speed=MAX_BOOST_SPEED
     steer_direction = get_steer(car, target-car.location)
     if not controls:
         controls = SimpleControllerState()
-    print("Speed: ", speed, " Direction: ", steer_direction)
     controls.steer = clamp(steer_direction)
     controls.throttle = clamp(speed/MAX_DRIVING_SPEED)
     controls.boost = speed > MAX_DRIVING_SPEED and car.boost > 0
