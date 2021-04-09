@@ -1,10 +1,10 @@
 from rlbot.agents.base_agent import SimpleControllerState
-from base.mechanic import Mechanic
+from base.action import Action
 from base.car import Car
 from base.ball import Ball
 from util.vec import Vec3
 
-class BelieveYouCanFly(Mechanic):
+class BelieveYouCanFly(Action):
     def __init__(self):
         super().__init__()
 

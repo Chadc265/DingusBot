@@ -2,13 +2,13 @@ import math
 from rlbot.agents.base_agent import SimpleControllerState
 from rlbot.utils.structures.game_data_struct import GameTickPacket
 from driving.drive import drive_to_target
-from base.mechanic import Mechanic
+from base.action import Action
 from base.car import Car
 from base.ball import Ball
 from util.vec import Vec3
 from util.boost import BoostTracker, Boost
 
-class BoostGrab(Mechanic):
+class BoostGrab(Action):
     def __init__(self, boost:Boost=None, boost_tracker:BoostTracker=None, only_in_path=False, max_time_to_boost=None):
         super().__init__()
         self.boost = boost
@@ -19,6 +19,7 @@ class BoostGrab(Mechanic):
         self.target = None
         if self.boost is not None:
             self.target = Vec3(self.boost.location)
+        self.state = "grabbing boost"
 
     def update(self, packet: GameTickPacket):
         if self.boost is not None:

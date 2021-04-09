@@ -24,8 +24,9 @@ def drive_to_target(car: Car, target: Vec3, controls=None, speed=MAX_BOOST_SPEED
         controls = SimpleControllerState()
     controls.steer = clamp(steer_direction)
     controls.throttle = clamp(speed/MAX_DRIVING_SPEED)
+    print("throttle: ", controls.throttle)
     controls.boost = speed > MAX_DRIVING_SPEED and car.boost > 0
-    if abs(steer_direction) > 2.3:
+    if abs(steer_direction) > 2.8:
         controls.handbrake = True
     return controls
 

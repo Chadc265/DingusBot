@@ -1,13 +1,14 @@
 from rlbot.agents.base_agent import SimpleControllerState
 from driving.drive import drive_to_target
-from base.mechanic import Mechanic
+from base.action import Action
 from base.car import Car
 from base.ball import Ball
 from util.vec import Vec3
-class BaseKickoff(Mechanic):
+class BaseKickoff(Action):
     def __init__(self, ball_center_offset:Vec3 = Vec3(0, 150, 0)):
         super().__init__()
         self.ball_center_offset = ball_center_offset
+        self.state = "kickoff"
         print("kickoff locked and loaded")
 
     def run(self, car: Car=None, ball: Ball=None) -> SimpleControllerState:

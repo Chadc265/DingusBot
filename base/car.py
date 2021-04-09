@@ -48,6 +48,12 @@ class Car:
     def speed(self):
         return self.velocity.length()
 
+    def stop_distance(self, coast=False):
+        if coast:
+            return (self.speed ** 2) / abs(constants.COAST_ACCELERATION)
+        else:
+            return (self.speed ** 2) / abs(constants.BREAK_ACCELERATION)
+
     def onside(self, ball_location, threshold=350):
         goal_location = Vec3(0, self.team*5120, 0)
         goal_to_ball = (ball_location - goal_location).normalized()
@@ -84,6 +90,13 @@ class Car:
         current_speed_to_target = self.velocity_to_target(target)
         distance = target - self.location
         return distance / current_speed_to_target
+
+    def time_to_stop(self, target):
+        # stopped
+        if self.speed == 0:
+            return 0
+        distance = target - self.location
+        return distance / constants.MAX_DRIVING_SPEED
 
     def get_closest_boosts(self, boosts:BoostTracker, in_current_path=False, path_angle_limit=0, return_time_to=False):
         all_boosts = boosts.all_boost
