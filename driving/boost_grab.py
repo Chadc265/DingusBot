@@ -9,7 +9,7 @@ from util.vec import Vec3
 from util.boost import BoostTracker, Boost
 
 class BoostGrab(Action):
-    def __init__(self, boost:Boost=None, boost_tracker:BoostTracker=None, only_in_path=False, max_time_to_boost=None):
+    def __init__(self, boost:Boost=None, boost_tracker:BoostTracker=None, only_in_path=False, max_time_to_boost=None, state:str = None):
         super().__init__()
         self.boost = boost
         self.pad = None
@@ -20,6 +20,8 @@ class BoostGrab(Action):
         if self.boost is not None:
             self.target = Vec3(self.boost.location)
         self.state = "grabbing boost"
+        if state is not None:
+            self.state = state
 
     def update(self, packet: GameTickPacket):
         if self.boost is not None:
@@ -52,7 +54,7 @@ class BoostGrab(Action):
 
         # Bail if finished, no boost passed, or boost no longer active
         if self.finished or (not self.boost):
-            return SimpleControllerState()
+            return self.controls
         self.controls = drive_to_target(car, self.target.flat(), controls=self.controls)
 
         # finished if close enough, boost taken, or car got enough along the way

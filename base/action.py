@@ -56,9 +56,11 @@ class ActionChain:
             # check that theres still an action before passing current controls
             if len(self.action_list) > 0:
                 self.current.controls = old_controls
+                self._last_state = self.current.state
 
         # Not busy if no actions
         if len(self.action_list) < 1:
+            # self._last_state = "nothing"
             return False
         # Must be doing something
         return True
@@ -86,6 +88,7 @@ class ActionChain:
             return SimpleControllerState()
 
         self.current.update(packet)
+        # print("action chain running: ", self.current.__class__.__name__)
         controls = self.current.run(**kwargs)
         return controls
 

@@ -23,7 +23,7 @@ class BoostTracker:
     def beans(self):
         return [b for b in self.all_boost if b.is_full_boost]
 
-    def get_back_boost(self, y_sign, x_sign):
+    def get_back_boost(self, y_sign, x_sign) -> Boost:
         for x in self.beans:
             # print(x_sign, x.location.x, x_sign*BACK_BOOST_X, y_sign, x.location.y, y_sign*BACK_BOOST_Y)
             if x.location.x == x_sign*BACK_BOOST_X and x.location.y == y_sign*BACK_BOOST_Y:

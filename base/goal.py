@@ -8,6 +8,16 @@ class Goal:
         self.left_post = Vec3(self.sign * 892, self.sign * 5120, 371)
         self.right_post = Vec3(-self.sign * 892, self.sign * 5120, 371)
 
+    def get_back_post_sign(self, ball_location):
+        ball_sign = clamp(ball_location.x)
+        if ball_sign > 0:
+            if self.sign > 0:
+                return 1
+            return -1
+        if self.sign > 1:
+            return  -1
+        return 1
+
     def get_back_post_rotation(self, ball_location):
         ball_sign = clamp(ball_location.x)
         diff = Vec3(self.sign*250, self.sign*250, 371)

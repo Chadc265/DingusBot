@@ -21,17 +21,19 @@ from util.math_funcs import clamp
 class Dingus(BaseAgent):
     def __init__(self, name, team, index):
         super().__init__(name, team, index)
-        self.allies = []
-        self.enemies = []
+        self.allies:list[Car] = []
+        self.enemies:list[Car] = []
         self.me: Car = None
         self.goals:list[Goal] = None
         self.ball: Ball = None
         self.actions: ActionChain = None
         self.game_info: GameInfo = None
-        self.boost_tracker = None
-        self.ready_for_kickoff = False
+        self.boost_tracker:BoostTracker = None
+        self.ready_for_kickoff:bool = False
         self.ball_prediction = None
-        self.state = "parked"
+        # self.state = "parked"
+        self.just_got_boost = False
+        self.debug_targets = []
 
     def initialize_agent(self):
         self.me = Car(self.team, self.index)
@@ -46,11 +48,19 @@ class Dingus(BaseAgent):
     def debug_actions(self, only_current=True):
         white_color = self.renderer.white()
         blue_color = self.renderer.blue()
+        red_color = self.renderer.red()
+        yellow_color = self.renderer.yellow()
         names = self.actions.get_chain_names()
-        self.renderer.draw_string_2d(10, 50, 3, 3, self.state, blue_color)
+        self.renderer.draw_string_2d(10, 50, 3, 3, self.actions.last_state, blue_color)
         if len(names) > 0:
             for i in range(len(names)):
                 self.renderer.draw_string_2d(10, 50 + (50 * (len(names) - i)), 3, 3, names[i], white_color)
+                if hasattr(self.actions.action_list[i], "target") and self.actions.action_list[i].target is not None:
+                    target_end = Vec3(self.actions.action_list[i].target.x, self.actions.action_list[i].target.y, self.actions.action_list[i].target.z + 300)
+                    if i == 0:
+                        self.renderer.draw_line_3d(self.actions.action_list[i].target, target_end, yellow_color)
+                    else:
+                        self.renderer.draw_line_3d(self.actions.action_list[i].target, target_end, red_color)
 
     def line(self, start, end, color=None, alpha=255):
         color = color if color is not None else [255, 255, 255]
@@ -64,7 +74,8 @@ class Dingus(BaseAgent):
 
     def reset_for_kickoff(self):
         self.actions = ActionChain(action_list=[BaseKickoff()])
-        self.state = "kickoff"
+        self.debug_targets = []
+        # self.state = "kickoff"
 
     def update_cars(self, packet: GameTickPacket):
         self.allies = [Car(c.team, i, packet) for i, c in enumerate(packet.game_cars) if c.team == self.team and i!=self.index]
@@ -99,20 +110,13 @@ class Dingus(BaseAgent):
         self.renderer.begin_rendering()
         self.debug_actions(False)
         out:SimpleControllerState = SimpleControllerState()
+
         # self.ball_prediction = self.get_ball_prediction_struct()
         # print(self.actions)
         # Draw some shit
         self.line(self.me.location, self.ball.location, [0, 255, 0])
-        self.state = str(self.actions.last_state)
-        # Run current action if one is available
-        if self.actions.busy:
-            if hasattr(self.actions.current, "target") and self.actions.current.target is not None:
-                self.line(self.me.location, self.actions.current.target, [255, 0, 0])
+        # self.state = self.actions.last_state
 
-            out = self.actions.execute(packet, car=self.me, ball=self.ball)
-
-        if self.is_kickoff() and self.ready_for_kickoff:
-            self.reset_for_kickoff()
 
         # No current plans
         """
@@ -126,24 +130,34 @@ class Dingus(BaseAgent):
         # Maybe get fancy by checking if this is true in 2 seconds????
         back_post = self.goals[self.team].get_back_post_rotation(self.ball.location)
         back_boost = self.boost_tracker.get_back_boost(self.me.side, -self.ball.side)
+        closer_to_ball = self.me.local(self.ball.location - self.me.location).length() < self.enemies[0].local(
+            self.ball.location - self.enemies[0].location).length()
+        print("Dingus closer to ball: ", closer_to_ball)
         if not self.actions.busy:
-            if self.state is not str("defending"):
-                if self.me.boost < 25:
-                    self.actions.append(BoostGrab(boost=back_boost, boost_tracker=self.boost_tracker))
+            if not enemy_onside or self.actions.last_state != "defending":
+                if self.me.boost < 25 and self.actions.last_state != "grabbing boost":
+                    self.actions.append(BoostGrab(boost=None, boost_tracker=self.boost_tracker))
                 else:
-                    closer_to_ball = self.me.local(self.ball.location).length() < self.enemies[0].local(
-                        self.ball.location).length()
                     self.actions.append(Ballchase(self.ball.last_touch_time, with_the_quickness=not closer_to_ball))
-        elif self.state is not str("kickoff"):
             # print(self.state == "going to defend")
-            if enemy_onside:
-                if self.state is not str("going to defend") and self.state is not str("defending"):
+        elif enemy_onside:
+            # if going to defend, this has already been called. if defending, already backpost
+            print("actions.state: ", self.actions.last_state)
+            print("action.state != defending: ", self.actions.last_state != "defending")
+            print("action.state != going to defend: ", self.actions.last_state != "going to defend")
+            if self.actions.last_state != "going to defend" and self.actions.last_state != "defending":
+                print("Adding another joyride???")
+                self.go_back_post(boost_first=True)
 
-                    print("Adding another joyride???")
-                    self.actions.interrupt_now(immediate_action=Joyride("going to defend", target=back_post, with_the_quickness=True))
-                    self.actions.append(Park("defending", apply_break=False))
+        # check for kickoff reset right before running actions
+        if self.is_kickoff() and self.ready_for_kickoff:
+            self.reset_for_kickoff()
 
-
+        if self.actions.busy:
+            print("doing action: ", self.actions.current.__class__.__name__)
+            if hasattr(self.actions.current, "target") and self.actions.current.target is not None:
+                self.line(self.me.location, self.actions.current.target, [255, 0, 0])
+            out = self.actions.execute(packet, car=self.me, ball=self.ball)
 
         # final things to do
         self.renderer.end_rendering()
@@ -152,8 +166,18 @@ class Dingus(BaseAgent):
     def make_a_plan(self):
         pass
 
-
-
+    def go_back_post(self, boost_first=True):
+        back_post = self.goals[self.team].get_back_post_rotation(self.ball.location)
+        back_post_sign = self.goals[self.team].get_back_post_sign(self.ball.location)
+        back_boost = self.boost_tracker.get_back_boost(self.me.side, back_post_sign)
+        back_boost_prep_target = Vec3(back_boost.location.x + (back_post_sign * 250), back_boost.location.y - (self.me.side * 250), 0)
+        self.actions.interrupt_now()
+        if boost_first:
+            self.actions.append(Joyride("going to defend", target=back_boost_prep_target, with_the_quickness=False))
+            self.actions.append(BoostGrab(boost=back_boost, state="going to defend"))
+        self.actions.append(Joyride("going to defend", target=back_post))
+        self.actions.append(Park("defending", face_ball=False, apply_break=False))
+        # self.debug_targets.extend([back_boost_prep_target, back_boost.location, back_post])
 
 
 """

@@ -91,11 +91,11 @@ class Car:
         distance = target - self.location
         return distance / current_speed_to_target
 
-    def time_to_stop(self, target):
+    def time_to_stop(self, coast=False):
         # stopped
         if self.speed == 0:
             return 0
-        distance = target - self.location
+        distance = self.stop_distance(coast=coast)
         return distance / constants.MAX_DRIVING_SPEED
 
     def get_closest_boosts(self, boosts:BoostTracker, in_current_path=False, path_angle_limit=0, return_time_to=False):

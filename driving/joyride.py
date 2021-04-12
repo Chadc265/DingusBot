@@ -22,14 +22,15 @@ class Joyride(Action):
         # close enough and nowhere to look next
         if distance_remaining <= stop_distance:
             self.finished = True
-            self.controls.throttle = 1 if self.with_the_quickness else 0
-            self.controls.boost = self.with_the_quickness
-            print(" Finished my joyride")
+            self.controls = drive_to_target(car, self.target, controls=self.controls)
+            # self.controls.throttle = 1 if self.with_the_quickness else 0
+            # self.controls.boost = self.with_the_quickness
+            # print(" Finished my joyride")
         elif stop_distance < 300:
             self.finished = True
             self.controls.throttle = 1 if self.with_the_quickness else 0
             self.controls.boost = self.with_the_quickness
-            print(" Finished my joyride")
+            # print(" Finished my joyride")
         else:
             self.controls = drive_to_target(car, self.target, controls=self.controls)
         return self.controls
