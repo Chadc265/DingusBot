@@ -1,12 +1,13 @@
 import math
+import random
 from rlbot.agents.base_agent import BaseAgent, SimpleControllerState
 from rlbot.utils.structures.game_data_struct import GameTickPacket, GameInfo
 from rlbot.utils.structures.ball_prediction_struct import BallPrediction
 from rlbot.utils.structures.game_data_struct import BoostPad
 
 from base.goal import Goal
-from base.car import Car
-from base.ball import Ball
+# from base.car import Car
+# from base.ball import Ball
 from base.action import ActionChain
 from driving.drive import drive_to_target
 from driving.kickoff import BaseKickoff
@@ -17,6 +18,12 @@ from driving.park import Park
 from util.vec import Vec3
 from util.boost import Boost, BoostTracker
 from util.math_funcs import clamp
+
+from rlutilities.mechanics import Drive
+from rlutilities.simulation import Car as Car
+from rlutilities.simulation import Ball as Ball
+from rlutilities.linear_algebra import vec3, dot, clip, norm
+from rlutilities.simulation import Game
 
 class Dingus(BaseAgent):
     def __init__(self, name, team, index):
@@ -34,11 +41,14 @@ class Dingus(BaseAgent):
         # self.state = "parked"
         self.just_got_boost = False
         self.debug_targets = []
+        self.action = None
+        self.controls = SimpleControllerState()
+        self.counter = 0
 
     def initialize_agent(self):
-        self.me = Car(self.team, self.index)
+        # self.me = Car(self.team, self.index)
         self.goals = [Goal(0), Goal(1)]
-        self.ball = Ball()
+        # self.ball = Ball()
         if not self.boost_tracker:
             self.boost_tracker = BoostTracker()
             self.boost_tracker.initialize_all_boost(self.get_field_info())
@@ -72,25 +82,25 @@ class Dingus(BaseAgent):
             self.ready_for_kickoff = True
         return ret
 
-    def reset_for_kickoff(self):
-        self.actions = ActionChain(action_list=[BaseKickoff()])
-        self.debug_targets = []
+    # def reset_for_kickoff(self):
+    #     self.actions = ActionChain(action_list=[BaseKickoff()])
+    #     self.debug_targets = []
         # self.state = "kickoff"
 
-    def update_cars(self, packet: GameTickPacket):
-        self.allies = [Car(c.team, i, packet) for i, c in enumerate(packet.game_cars) if c.team == self.team and i!=self.index]
-        self.enemies = [Car(c.team, i, packet) for i, c in enumerate(packet.game_cars) if c.team != self.team]
-        self.me = Car(self.team, self.index, packet)
+    # def update_cars(self, packet: GameTickPacket):
+    #     self.allies = [Car(c.team, i, packet) for i, c in enumerate(packet.game_cars) if c.team == self.team and i!=self.index]
+    #     self.enemies = [Car(c.team, i, packet) for i, c in enumerate(packet.game_cars) if c.team != self.team]
+    #     self.me = Car(self.team, self.index, packet)
 
-    def preprocess(self, packet: GameTickPacket):
-        if packet.num_cars != len(self.allies) + len(self.enemies) + 1:
-            self.update_cars(packet)
-        [c.update(packet) for c in self.allies]
-        [c.update(packet) for c in self.enemies]
-        self.me.update(packet)
-        self.ball.update(packet)
-        self.game_info = packet.game_info
-        self.boost_tracker.update(packet)
+    # def preprocess(self, packet: GameTickPacket):
+    #     if packet.num_cars != len(self.allies) + len(self.enemies) + 1:
+    #         self.update_cars(packet)
+    #     [c.update(packet) for c in self.allies]
+    #     [c.update(packet) for c in self.enemies]
+    #     self.me.update(packet)
+    #     self.ball.update(packet)
+    #     self.game_info = packet.game_info
+    #     self.boost_tracker.update(packet)
 
 
     # def increment_state(self):
@@ -106,18 +116,21 @@ class Dingus(BaseAgent):
 
     def get_output(self, packet: GameTickPacket) -> SimpleControllerState:
         # Preliminary things to do
-        self.preprocess(packet)
-        self.renderer.begin_rendering()
-        self.debug_actions(False)
+        # self.preprocess(packet)
+        # self.renderer.begin_rendering()
+        # self.debug_actions(False)
         out:SimpleControllerState = SimpleControllerState()
 
         # self.ball_prediction = self.get_ball_prediction_struct()
         # print(self.actions)
         # Draw some shit
-        self.line(self.me.location, self.ball.location, [0, 255, 0])
+        # self.line(self.me.location, self.ball.location, [0, 255, 0])
         # self.state = self.actions.last_state
 
-
+        if self.action is None or self.action.finished or self.counter == 400:
+            target_pos = vec3(random.uniform(-3000, 3000), random.uniform(-2000, 2000), 25)
+            target_speed = random.uniform(500, 2000)
+            self.action = Drive(self)
         # No current plans
         """
         If enemy onside, go back post and wait if not doing either yet
@@ -126,41 +139,42 @@ class Dingus(BaseAgent):
         Should break routine to go back post if enemy goes onside
         """
 
-        enemy_onside = self.enemies[0].onside(self.ball.location, 200)
-        # Maybe get fancy by checking if this is true in 2 seconds????
-        back_post = self.goals[self.team].get_back_post_rotation(self.ball.location)
-        back_boost = self.boost_tracker.get_back_boost(self.me.side, -self.ball.side)
-        closer_to_ball = self.me.local(self.ball.location - self.me.location).length() < self.enemies[0].local(
-            self.ball.location - self.enemies[0].location).length()
-        print("Dingus closer to ball: ", closer_to_ball)
-        if not self.actions.busy:
-            if not enemy_onside or self.actions.last_state != "defending":
-                if self.me.boost < 25 and self.actions.last_state != "grabbing boost":
-                    self.actions.append(BoostGrab(boost=None, boost_tracker=self.boost_tracker))
-                else:
-                    self.actions.append(Ballchase(self.ball.last_touch_time, with_the_quickness=not closer_to_ball))
-            # print(self.state == "going to defend")
-        elif enemy_onside:
-            # if going to defend, this has already been called. if defending, already backpost
-            print("actions.state: ", self.actions.last_state)
-            print("action.state != defending: ", self.actions.last_state != "defending")
-            print("action.state != going to defend: ", self.actions.last_state != "going to defend")
-            if self.actions.last_state != "going to defend" and self.actions.last_state != "defending":
-                print("Adding another joyride???")
-                self.go_back_post(boost_first=True)
+        # enemy_onside = self.enemies[0].onside(self.ball.location, 200)
+        # # Maybe get fancy by checking if this is true in 2 seconds????
+        # back_post = self.goals[self.team].get_back_post_rotation(self.ball.location)
+        # back_boost = self.boost_tracker.get_back_boost(self.me.side, -self.ball.side)
+        # closer_to_ball = self.me.local(self.ball.location - self.me.location).length() < self.enemies[0].local(
+        #     self.ball.location - self.enemies[0].location).length()
+        # print("Dingus closer to ball: ", closer_to_ball)
+        # if not self.actions.busy:
+        #     if not enemy_onside or self.actions.last_state != "defending":
+        #         if self.me.boost < 25 and self.actions.last_state != "grabbing boost":
+        #             self.actions.append(BoostGrab(boost=None, boost_tracker=self.boost_tracker))
+        #         else:
+        #             self.actions.append(Ballchase(self.ball.last_touch_time, with_the_quickness=not closer_to_ball))
+        #     # print(self.state == "going to defend")
+        # elif enemy_onside:
+        #     # if going to defend, this has already been called. if defending, already backpost
+        #     print("actions.state: ", self.actions.last_state)
+        #     print("action.state != defending: ", self.actions.last_state != "defending")
+        #     print("action.state != going to defend: ", self.actions.last_state != "going to defend")
+        #     if self.actions.last_state != "going to defend" and self.actions.last_state != "defending":
+        #         print("Adding another joyride???")
+        #         self.go_back_post(boost_first=True)
 
         # check for kickoff reset right before running actions
-        if self.is_kickoff() and self.ready_for_kickoff:
-            self.reset_for_kickoff()
+        # if self.is_kickoff() and self.ready_for_kickoff:
+        #     self.reset_for_kickoff()
 
-        if self.actions.busy:
-            print("doing action: ", self.actions.current.__class__.__name__)
-            if hasattr(self.actions.current, "target") and self.actions.current.target is not None:
-                self.line(self.me.location, self.actions.current.target, [255, 0, 0])
-            out = self.actions.execute(packet, car=self.me, ball=self.ball)
-
+        # if self.actions.busy:
+        #     print("doing action: ", self.actions.current.__class__.__name__)
+        #     if hasattr(self.actions.current, "target") and self.actions.current.target is not None:
+        #         # self.line(self.me.location, self.actions.current.target, [255, 0, 0])
+        #         self.line(self.me.location, self.me.location + self.me.local(self.actions.current.target - self.me.location).normalized() * 1000)
+        #         print(self.actions.current.target)
+        #     out = self.actions.execute(packet, car=self.me, ball=self.ball)
         # final things to do
-        self.renderer.end_rendering()
+        # self.renderer.end_rendering()
         return out
 
     def make_a_plan(self):
