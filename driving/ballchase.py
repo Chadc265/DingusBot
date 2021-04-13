@@ -1,36 +1,11 @@
 from rlbot.agents.base_agent import SimpleControllerState
 from rlbot.utils.structures.ball_prediction_struct import BallPrediction
-from driving.drive import drive_to_target
-from driving.joyride import Joyride
-from base.action import Action, ActionChain
-from base.car import Car
-from base.ball import Ball
-from util.vec import Vec3
+from rlutilities.simulation import Car, Ball
+from rlutilities.linear_algebra import vec3
+from rlutilities.mechanics import Drive
 
 import math
 
-class Ballchase(Action):
-    def __init__(self, last_touch_time, ball_prediction: BallPrediction=None, with_the_quickness=False):
-        super().__init__()
-        self.last_touch_time = last_touch_time
-        self.with_the_quickness = with_the_quickness
-        self.ball_prediction = ball_prediction
-        self.state = "ballchasing"
-        print("BALLCHASE INITIATED...SOMEWHERE...SOMETIME IN THE FUTURE")
-
-    def run(self, car: Car=None, ball: Ball=None) -> SimpleControllerState:
-        if self.finished:
-            print("Ballchasing is exhausting. I'm over it")
-            return SimpleControllerState()
-        target = ball.location
-        # self.target, time_to = car.intersects(ball)
-        # if not self.target:
-        #     print("Couldn't find an intersection")
-        #     self.target = ball.location
-        self.controls = drive_to_target(car, target, controls=self.controls)
-        if self.with_the_quickness:
-            self.controls.boost = True
-        if car.local(target-car.location).length() < 100 or self.last_touch_time != ball.last_touch_time:
-            print("Someone touched the ball!")
-            self.finished = True
-        return self.controls
+class Ballchase(Drive):
+    def __init__(self, car: Car):
+        super().__init__(car)
