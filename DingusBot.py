@@ -6,6 +6,8 @@ from rlutilities.linear_algebra import vec3
 
 from base.action import Action
 from kickoffs.base_kickoff import BaseKickoff
+from kickoffs.single_jump_kickoff import SingleJumpKickoff
+from kickoffs.dodge_kickoff import DodgeKickoff
 from util.boost import Boost, BoostTracker
 
 
@@ -19,7 +21,7 @@ class Dingus(BaseAgent):
         self.game:Game = Game()
         self.boost_tracker:BoostTracker = None
         self.ready_for_kickoff:bool = False
-        self.go_for_kickoff:bool = False
+        self.kickoff_flag:bool = False
         self.controls:SimpleControllerState = SimpleControllerState()
         self.last_time = 0.0
         self.dt = 0.0
@@ -42,6 +44,8 @@ class Dingus(BaseAgent):
 
     def preprocess(self, packet:GameTickPacket):
         self.game.read_packet(packet)
+        if packet.game_info.is_kickoff_pause and packet.game_info.is_round_active:
+            self.kickoff_flag = True
         temp_time = self.game.time
         self.dt = temp_time - self.last_time
         self.last_time = temp_time
@@ -50,10 +54,14 @@ class Dingus(BaseAgent):
 
 
     def get_output(self, packet: GameTickPacket) -> SimpleControllerState:
+        self.preprocess(packet)
         self.controls = SimpleControllerState()
-        if self.is_kickoff() and self.ready_for_kickoff:
-            self.action = BaseKickoff(self.game.cars[self.index], self.game.ball)
-            self.ready_for_kickoff = False
+        if self.action is not None and self.action.finished:
+            self.action = None
+        if self.kickoff_flag:
+            self.action = DodgeKickoff(self.game.cars[self.index], self.game.ball)
+            self.kickoff_flag = False
+
         if self.action is not None:
             self.controls = self.action.step(self.dt)
         return self.controls

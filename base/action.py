@@ -6,9 +6,5 @@ class Action:
         self.controls:SimpleControllerState = SimpleControllerState()
         self.finished:bool = False
 
-    @property
-    def can_interrupt(self):
-        return True
-
     def step(self, dt:float):
         pass
