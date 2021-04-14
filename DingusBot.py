@@ -8,10 +8,12 @@ from rlutilities.linear_algebra import vec3
 
 from base.action import Action
 from driving.beeline import BeeLine
+from driving.layup import LayUp
 from kickoffs.base_kickoff import BaseKickoff
 from kickoffs.single_jump_kickoff import SingleJumpKickoff
 from kickoffs.dodge_kickoff import DodgeKickoff
 from util.boost import Boost, BoostTracker
+from util.math_funcs import sign
 
 
 
@@ -73,10 +75,11 @@ class Dingus(BaseAgent):
                 self.set_training_scenario()
             elif self.action is not None:
                 self.action.step(self.dt)
+                self.draw_point(self.action.line_up_target)
                 self.controls = self.action.controls
                 self.training_timer += self.dt
             else:
-                self.action = BeeLine(self.game.cars[self.index], self.ball.position)
+                self.action = LayUp(self.game.cars[self.index], self.ball)
 
             return self.controls
 
@@ -90,13 +93,31 @@ class Dingus(BaseAgent):
             self.controls = self.action.step(self.dt)
         return self.controls
 
+    def draw_point(self, point):
+        r = 200
+        self.renderer.begin_rendering()
+        purple = self.renderer.create_color(255, 230, 30, 230)
+
+        self.renderer.draw_line_3d(point - r * vec3(1, 0, 0),
+                                   point + r * vec3(1, 0, 0),
+                                   purple)
+
+        self.renderer.draw_line_3d(point - r * vec3(0, 1, 0),
+                                   point + r * vec3(0, 1, 0),
+                                   purple)
+
+        self.renderer.draw_line_3d(point - r * vec3(0, 0, 1),
+                                   point + r * vec3(0, 0, 1),
+                                   purple)
+        self.renderer.end_rendering()
+
     def set_training_scenario(self):
         self.training_timer = 0.0
         b_position = Vector3(random.uniform(-1500, 1500),
-                             random.uniform(0, 3500),
+                             random.uniform(-sign(self.team)*1000, -sign(self.team)*3500),
                              93)
         c_position = Vector3(random.uniform(-1000, 1000),
-                             random.uniform(-500, -1500),
+                             random.uniform(sign(self.team) * 2000, sign(self.team)*1500),
                              25)
         ball_state = BallState(physics=Physics(
             location=b_position,

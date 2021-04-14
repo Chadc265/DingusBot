@@ -1,6 +1,6 @@
 import math
 from util.constants import *
-from util.vec import Vec3
+from rlutilities.linear_algebra import vec3
 
 # Mostly from Gosling utils and PythonExample
 def sign(team: int):
@@ -11,17 +11,17 @@ def sign(team: int):
 def clamp(val, minimum=-1, maximum=1):
     return min(max(minimum, val), maximum)
 
-def clamp_in_field(location:Vec3):
-    ret = Vec3(clamp(location.x, -FIELD_MAX_X, FIELD_MAX_X),
+def clamp_in_field(location:vec3):
+    ret = vec3(clamp(location.x, -FIELD_MAX_X, FIELD_MAX_X),
                clamp(location.y, -FIELD_MAX_Y, FIELD_MAX_Y),
                clamp(location.z, -FIELD_MAX_Z, FIELD_MAX_Z))
     return ret
 
-def clamp_vecs(vec: Vec3, left:Vec3, right:Vec3):
+def clamp_vecs(vec: vec3, left:vec3, right:vec3):
     x = clamp(vec.x, left.x, right.x)
     y = clamp(vec.y, left.y, right.y)
     z = clamp(vec.z, left.z, right.z)
-    return Vec3(x, y, z)
+    return vec3(x, y, z)
 
 def quadratic(a,b,c):
     #Returns the two roots of a quadratic
