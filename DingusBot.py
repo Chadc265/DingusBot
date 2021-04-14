@@ -1,10 +1,13 @@
 import random
 from rlbot.agents.base_agent import BaseAgent, SimpleControllerState
 from rlbot.utils.structures.game_data_struct import GameTickPacket, GameInfo
+from rlbot.utils.game_state_util import BallState, CarState, Physics, Vector3, Rotator
+from rlbot.utils.game_state_util import GameState as BotGameState
 from rlutilities.simulation import Car, Ball, Goal, Game, GameState
 from rlutilities.linear_algebra import vec3
 
 from base.action import Action
+from driving.beeline import BeeLine
 from kickoffs.base_kickoff import BaseKickoff
 from kickoffs.single_jump_kickoff import SingleJumpKickoff
 from kickoffs.dodge_kickoff import DodgeKickoff
@@ -27,6 +30,10 @@ class Dingus(BaseAgent):
         self.dt = 0.0
         self.simulation_step = 0.01666
         self.counter = 0
+        self.training_timer = 0.0
+        ####################################
+        self.training_flag = True
+        ####################################
 
     def initialize_agent(self):
         # initialize for rlutilities
@@ -46,6 +53,7 @@ class Dingus(BaseAgent):
         self.game.read_packet(packet)
         if packet.game_info.is_kickoff_pause and packet.game_info.is_round_active:
             self.kickoff_flag = True
+        # self.boost_tracker.update(packet)
         temp_time = self.game.time
         self.dt = temp_time - self.last_time
         self.last_time = temp_time
@@ -56,6 +64,22 @@ class Dingus(BaseAgent):
     def get_output(self, packet: GameTickPacket) -> SimpleControllerState:
         self.preprocess(packet)
         self.controls = SimpleControllerState()
+        if self.training_flag:
+            if self.action is not None and self.action.finished:
+                self.action = None
+                self.set_training_scenario()
+            elif self.training_timer > 10:
+                self.action = None
+                self.set_training_scenario()
+            elif self.action is not None:
+                self.action.step(self.dt)
+                self.controls = self.action.controls
+                self.training_timer += self.dt
+            else:
+                self.action = BeeLine(self.game.cars[self.index], self.ball.position)
+
+            return self.controls
+
         if self.action is not None and self.action.finished:
             self.action = None
         if self.kickoff_flag:
@@ -66,7 +90,30 @@ class Dingus(BaseAgent):
             self.controls = self.action.step(self.dt)
         return self.controls
 
-
+    def set_training_scenario(self):
+        self.training_timer = 0.0
+        b_position = Vector3(random.uniform(-1500, 1500),
+                             random.uniform(0, 3500),
+                             93)
+        c_position = Vector3(random.uniform(-1000, 1000),
+                             random.uniform(-500, -1500),
+                             25)
+        ball_state = BallState(physics=Physics(
+            location=b_position,
+            velocity=Vector3(0, 0, 0),
+            rotation=Rotator(0, 0, 0),
+            angular_velocity=Vector3(0, 0, 0)
+        ))
+        car_state = CarState(physics=Physics(
+            location=c_position,
+            velocity=Vector3(0, 0, 0),
+            rotation=Rotator(0, 0, 0),
+            angular_velocity=Vector3(0, 0, 0)
+        ), boost_amount=100)
+        self.set_game_state(BotGameState(
+            ball=ball_state,
+            cars={self.index: car_state}
+        ))
     # def go_back_post(self, boost_first=True):
     #     back_post = self.goals[self.team].get_back_post_rotation(self.ball.location)
     #     back_post_sign = self.goals[self.team].get_back_post_sign(self.ball.location)

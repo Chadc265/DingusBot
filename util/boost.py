@@ -1,7 +1,7 @@
 from rlbot.utils.structures.game_data_struct import GameTickPacket, FieldInfoPacket, BoostPad, BoostPadState
 from rlutilities.simulation import Car
 from rlutilities.linear_algebra import vec3
-from util.car import is_facing_target, velocity_to_target
+from util.car import is_aligned_to_target, velocity_to_target
 from util.constants import *
 class Boost:
     def __init__(self, boost_pad: BoostPad, index:int):
@@ -41,7 +41,7 @@ class BoostTracker:
         fallback_distance = math.inf
 
         for b in all_boosts:
-            if not in_current_path or (in_current_path and is_facing_target(car, b.location)):
+            if not in_current_path or (in_current_path and is_aligned_to_target(car, b.location)):
                 test = (b.location - car_location).length()
                 if test < closest_distance and (b.is_full_boost and b.is_active):
                     closest_bean = b

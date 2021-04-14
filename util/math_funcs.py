@@ -3,6 +3,10 @@ from util.constants import *
 from util.vec import Vec3
 
 # Mostly from Gosling utils and PythonExample
+def sign(team: int):
+    if team == 0:
+        return -1
+    return 1
 
 def clamp(val, minimum=-1, maximum=1):
     return min(max(minimum, val), maximum)

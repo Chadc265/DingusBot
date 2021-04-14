@@ -13,4 +13,4 @@ class SingleJumpKickoff(BaseKickoff):
     def step(self, dt:float):
         if norm(self.ball.position - self.car.position) <= self.distance_to_jump:
             self.action = self.jump
-        return super().step(dt)
+        super().step(dt)

@@ -4,12 +4,14 @@ from rlbot.utils.structures.game_data_struct import GameTickPacket
 
 from rlutilities.simulation import Car, Ball
 from rlutilities.linear_algebra import vec3
-from rlutilities.mechanics import Drive
+from rlutilities.mechanics import Drive, Dodge
+from base.action import Action
 from util.boost import BoostTracker, Boost
 from util.constants import *
 
-class BoostGrab(Drive):
-    def __init__(self, car:Car, speed=MAX_DRIVING_SPEED, boost:Boost=None, boost_tracker:BoostTracker=None, only_in_path=False, max_time_to_boost=None):
+
+class BoostGrab(Action):
+    def __init__(self, car:Car, boost:Boost=None, boost_tracker:BoostTracker=None, only_in_path=False, max_time_to_boost=None):
         super().__init__(car)
         self.boost = boost
         self.pad = None
@@ -23,23 +25,22 @@ class BoostGrab(Drive):
         if self.boost is not None:
             self.boost.update(packet)
 
-    def initialize_target_boost(self, car:Car):
-        if not car.on_ground:
-            if not self.max_time:
-                self.boost, self.pad = self.boost_tracker.get_closest_boosts(car, in_current_path=self.in_path)
-                if not self.boost:
-                    self.boost = self.pad
-            else:
-                self.boost, self.pad, times = self.boost_tracker.get_closest_boosts(car, in_current_path=self.in_path,
-                                                                     path_angle_limit=0, return_time_to=True)
-                # No boost reachable. Life sucks
-                if times[0] >= self.max_time and times[1] >= self.max_time:
-                    return False
-                if times[1] < self.max_time:
-                    self.boost = self.pad
-            print("Boost target acquired!")
-            self.target = vec3(self.boost.location)
-            return True
+    def initialize_target_boost(self):
+        if not self.max_time:
+            self.boost, self.pad = self.boost_tracker.get_closest_boosts(self.car, in_current_path=self.in_path)
+            if not self.boost:
+                self.boost = self.pad
+        else:
+            self.boost, self.pad, times = self.boost_tracker.get_closest_boosts(self.car, in_current_path=self.in_path,
+                                                                 path_angle_limit=0, return_time_to=True)
+            # No boost reachable. Life sucks
+            if times[0] >= self.max_time and times[1] >= self.max_time:
+                return False
+            if times[1] < self.max_time:
+                self.boost = self.pad
+        print("Boost target acquired!")
+        self.target = vec3(self.boost.location)
+        return True
 
-    def run(self, car: Car=None, ball: Ball=None) -> SimpleControllerState:
+    def step(self, dt:float) -> SimpleControllerState:
         pass

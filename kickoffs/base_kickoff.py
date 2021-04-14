@@ -1,6 +1,6 @@
 from rlbot.agents.base_agent import SimpleControllerState
-from rlutilities.linear_algebra import vec2, vec3, normalize
-from rlutilities.mechanics import Drive, Jump
+from rlutilities.linear_algebra import vec3
+from rlutilities.mechanics import Drive
 from rlutilities.simulation import Car, Ball
 from base.action import Action
 from util.constants import MAX_BOOST_SPEED
@@ -20,8 +20,8 @@ class BaseKickoff(Action):
 
         self.controls = SimpleControllerState()
 
-    def step(self, dt:float) -> SimpleControllerState():
+    def step(self, dt:float):
         self.action.step(dt)
         self.controls = self.action.controls
         self.finished = self.ball.position.y == 0
-        return self.controls
+

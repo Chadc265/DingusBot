@@ -20,4 +20,3 @@ class DodgeKickoff(BaseKickoff):
         self.action.step(dt)
         self.controls = self.action.controls
         self.finished = self.dodge.finished
-        return self.controls
