@@ -84,7 +84,7 @@ class Dingus(BaseAgent):
                 self.controls = self.action.controls
                 self.training_timer += self.dt
             else:
-                self.action = LayUp(self.game.cars[self.index], self.ball.position)
+                self.action = LayUp(self.game.cars[self.index], self.ball)
 
             return self.controls
         ########################################

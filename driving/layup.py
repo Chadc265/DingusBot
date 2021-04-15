@@ -8,14 +8,15 @@ from util.car_util import is_aligned_to_target
 from util.math_funcs import sign, clamp_in_field, clamp
 
 class LayUp(DriveAction):
-    def __init__(self, car:Car, ball_position: vec3):
-        super().__init__(car, ball_position)
-        self.ball_position = ball_position
+    def __init__(self, car:Car, ball: Ball):
+        super().__init__(car, ball.position)
+        self.ball_position = ball.position
         self.line_up_target = self.get_line_up_position()
         self.target = self.line_up_target
         self.shot_contact_offset = self.get_shot_contact_offset()
         self.in_line_frames = 0
         self.stage = 0
+        self.shot_target = vec3(clamp(self.ball_position.x) * 500, -sign(self.car.team) * 5120, 0)
 
 
     @property
@@ -29,12 +30,32 @@ class LayUp(DriveAction):
     def distance_remaining(self):
         return self.target - self.car.position
 
+    def get_prediction(self, ball: Ball):
+        pred = Ball(ball)
+        ball_predictions = [vec3(pred.position)]
+        target_ball = None
+        arrival_time = 0.0
+        for i in range(100):
+            pred.step(0.016666)
+            pred.step(0.016666)
+            ball_predictions.append(vec3(pred.position))
+            if pred.position.z < 150:
+                simulation = self.simulate(pred.position)
+                if norm(simulation.position - pred.position) < 100:
+                    pred.step(0.016666)
+                    pred.step(0.016666)
+                    self.target = pred.position
+                    arrival_time = pred.time
+                    target_ball = Ball(pred)
+                    break
+
+
     def update_target_position(self, ball_position):
         self.ball_position = ball_position
 
     def get_shot_contact_offset(self):
-        center_goal = vec3(clamp(self.ball_position.x) * 500, -sign(self.car.team) * 5120, 0)
-        ball_to_goal = normalize(center_goal - self.ball_position)
+
+        ball_to_goal = normalize(self.shot_target - self.ball_position)
         offset = clamp_in_field(ball_to_goal * 50)
         return vec3(offset.x, offset.y, 0)
 

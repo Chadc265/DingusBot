@@ -1,27 +1,14 @@
 import math
 from util.constants import *
-from rlutilities.linear_algebra import vec3
+from rlutilities.linear_algebra import vec3, dot, cross
 
 # Mostly from Gosling utils and PythonExample
-def sign(team: int):
-    if team == 0:
-        return -1
-    return 1
 
-def clamp(val, minimum=-1, maximum=1):
-    return min(max(minimum, val), maximum)
-
-def clamp_in_field(location:vec3):
-    ret = vec3(clamp(location.x, -FIELD_MAX_X, FIELD_MAX_X),
-               clamp(location.y, -FIELD_MAX_Y, FIELD_MAX_Y),
-               clamp(location.z, -FIELD_MAX_Z, FIELD_MAX_Z))
-    return ret
-
-def clamp_vecs(vec: vec3, left:vec3, right:vec3):
-    x = clamp(vec.x, left.x, right.x)
-    y = clamp(vec.y, left.y, right.y)
-    z = clamp(vec.z, left.z, right.z)
-    return vec3(x, y, z)
+# These guys were borrowed verbatum from Gosling Utils
+def find_shot_slope(shot_vector: vec3, car_to_target: vec3):
+    d = dot(shot_vector, car_to_target)
+    e = abs(dot(car_to_target, cross(shot_vector, vec3(0, 0, 1))))
+    return clamp(d / e if e != 0 else 10*sign(d), -3.0, 3.0)
 
 def quadratic(a,b,c):
     #Returns the two roots of a quadratic
@@ -36,6 +23,26 @@ def lerp(a, b, t):
 
 def inv_lerp(a, b, v):
     return a if b - a == 0 else (v - a) / (b - a)
+
+def sign(team):
+    if team <= 0:
+        return -1
+    return 1
+
+def clamp(val, minimum=-1.0, maximum=1.0):
+    return min(max(minimum, val), maximum)
+
+def clamp_in_field(location:vec3):
+    ret = vec3(clamp(location.x, -FIELD_MAX_X, FIELD_MAX_X),
+               clamp(location.y, -FIELD_MAX_Y, FIELD_MAX_Y),
+               clamp(location.z, -FIELD_MAX_Z, FIELD_MAX_Z))
+    return ret
+
+def clamp_vecs(vec: vec3, left: vec3, right: vec3):
+    x = clamp(vec.x, left.x, right.x)
+    y = clamp(vec.y, left.y, right.y)
+    z = clamp(vec.z, left.z, right.z)
+    return vec3(x, y, z)
 
 # turn_radius and curvature taken from https://github.com/RLBot/RLBot/wiki/Useful-Game-Values like a dirty little programmer
 def turn_radius(v):
