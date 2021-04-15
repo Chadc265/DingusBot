@@ -36,7 +36,7 @@ class Dingus(BaseAgent):
         self.counter = 0
         self.training_timer = 0.0
         ####################################
-        self.training_flag = False
+        self.training_flag = True
         ####################################
 
     def initialize_agent(self):
@@ -78,12 +78,13 @@ class Dingus(BaseAgent):
                 self.action = None
                 self.set_training_scenario()
             elif self.action is not None:
+                self.action.update_target_position(self.ball.position)
                 self.action.step(self.dt)
-                # self.draw_point(self.action.line_up_target)
+                self.draw_point(self.action.target)
                 self.controls = self.action.controls
                 self.training_timer += self.dt
             else:
-                self.action = LayUp(self.game.cars[self.index], self.ball)
+                self.action = LayUp(self.game.cars[self.index], self.ball.position)
 
             return self.controls
         ########################################
