@@ -14,11 +14,13 @@ class BaseKickoff(Action):
         self.drive = Drive(self.car)
         self.drive.speed = MAX_BOOST_SPEED
         self.drive.target = ball.position + self.ball_center_offset
-
         self.action = self.drive
         self.state = "initial drive"
-
         self.controls = SimpleControllerState()
+
+    @property
+    def can_interrupt(self):
+        return False
 
     def step(self, dt:float):
         self.action.step(dt)

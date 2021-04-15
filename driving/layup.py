@@ -4,7 +4,7 @@ from rlutilities.linear_algebra import vec3, normalize, norm
 from rlutilities.mechanics import Drive
 from rlutilities.simulation import Car, Ball
 from base.action import Action
-from util.car import is_aligned_to_target
+from util.car_util import is_aligned_to_target
 from util.math_funcs import sign, clamp_in_field, clamp
 
 class LayUp(Action):
@@ -12,9 +12,10 @@ class LayUp(Action):
         super().__init__(car)
         self.ball = ball
         self.drive = Drive(self.car)
-        self.line_up_target = self.get_drive_target()
+        self.line_up_target = self.get_line_up_position()
         self.drive.target = self.line_up_target
         self.action = self.drive
+        self.shot_contact_offset = vec3(0, 0, 0)
         self.in_line_frames = 0
         self.stage = 0
 
@@ -29,7 +30,13 @@ class LayUp(Action):
     def distance_remaining(self):
         return self.drive.target - self.car.position
 
-    def get_drive_target(self):
+    def get_shot_contact_offset(self):
+        center_goal = vec3(clamp(self.ball.position.x) * 500, -sign(self.car.team) * 5120, 0)
+        ball_to_goal = normalize(center_goal - self.ball.position)
+        offset = clamp_in_field(ball_to_goal * 1500)
+        vec3(offset.x, offset.y, 0)
+
+    def get_line_up_position(self):
         center_goal = vec3(clamp(self.ball.position.x) * 500, -sign(self.car.team) * 5120, 0)
         ball_to_goal = normalize(center_goal - self.ball.position)
         new_target = clamp_in_field(self.ball.position - ball_to_goal * 1500)

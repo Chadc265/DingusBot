@@ -6,8 +6,10 @@ from rlbot.utils.game_state_util import GameState as BotGameState
 from rlutilities.simulation import Car, Ball, Goal, Game, GameState
 from rlutilities.linear_algebra import vec3
 
-from base.action import Action
+from base.action import Action, DriveAction, AerialAction
 from driving.beeline import BeeLine
+from driving.boost_grab import BoostGrab
+from driving.ballchase import Ballchase
 from driving.layup import LayUp
 from kickoffs.base_kickoff import BaseKickoff
 from kickoffs.single_jump_kickoff import SingleJumpKickoff
@@ -34,7 +36,7 @@ class Dingus(BaseAgent):
         self.counter = 0
         self.training_timer = 0.0
         ####################################
-        self.training_flag = True
+        self.training_flag = False
         ####################################
 
     def initialize_agent(self):
@@ -55,7 +57,7 @@ class Dingus(BaseAgent):
         self.game.read_packet(packet)
         if packet.game_info.is_kickoff_pause and packet.game_info.is_round_active:
             self.kickoff_flag = True
-        # self.boost_tracker.update(packet)
+        self.boost_tracker.update(packet)
         temp_time = self.game.time
         self.dt = temp_time - self.last_time
         self.last_time = temp_time
@@ -66,6 +68,8 @@ class Dingus(BaseAgent):
     def get_output(self, packet: GameTickPacket) -> SimpleControllerState:
         self.preprocess(packet)
         self.controls = SimpleControllerState()
+        ########################################
+        ########################################
         if self.training_flag:
             if self.action is not None and self.action.finished:
                 self.action = None
@@ -75,13 +79,15 @@ class Dingus(BaseAgent):
                 self.set_training_scenario()
             elif self.action is not None:
                 self.action.step(self.dt)
-                self.draw_point(self.action.line_up_target)
+                # self.draw_point(self.action.line_up_target)
                 self.controls = self.action.controls
                 self.training_timer += self.dt
             else:
                 self.action = LayUp(self.game.cars[self.index], self.ball)
 
             return self.controls
+        ########################################
+        ########################################
 
         if self.action is not None and self.action.finished:
             self.action = None
@@ -89,9 +95,34 @@ class Dingus(BaseAgent):
             self.action = DodgeKickoff(self.game.cars[self.index], self.game.ball)
             self.kickoff_flag = False
 
+        ##### NOTHING TO DO #####
+        if self.action is None:
+            self.action = Ballchase(self.game.cars[self.index], self.game.ball.position)
+            self.action.speed = 2300
+        #### INTERRUPT IF NEEDED AND POSSIBLE ####
+        else:
+            if self.action.can_interrupt:
+            # Leave a ballchase to get boost
+                if isinstance(self.action, Ballchase) and self.game.cars[self.index].boost < 15:
+                    self.action = BoostGrab(self.game.cars[self.index],
+                                            boost_tracker=self.boost_tracker)
+
+        #### STEP CURRENT ACTION ####
         if self.action is not None:
-            self.controls = self.action.step(self.dt)
+            self.draw_action_name()
+            update_method = getattr(self.action, "update_target_position", None)
+            if callable(update_method):
+                self.action.update_target_position(self.game.ball.position)
+            self.action.step(self.dt)
+            self.controls = self.action.controls
         return self.controls
+
+    def draw_action_name(self):
+        self.renderer.begin_rendering()
+        white = self.renderer.white()
+        text = self.action.__class__.__name__
+        self.renderer.draw_string_2d(10, 50, 3, 3, text, white)
+        self.renderer.end_rendering()
 
     def draw_point(self, point):
         r = 200

@@ -13,6 +13,10 @@ class FrontFlip(Action):
         self.timer = 0.0
 
     @property
+    def can_interrupt(self):
+        return not self.dodged
+
+    @property
     def pre_dodge_time(self):
         return self.dodge_delay + self.jump_duration
 

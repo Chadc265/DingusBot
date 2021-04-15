@@ -1,7 +1,7 @@
 import math
 import typing
 
-from rlutilities.linear_algebra import vec3, dot, normalize
+from rlutilities.linear_algebra import vec3, dot, normalize, norm
 from rlutilities.simulation import Car, Ball
 from util import constants
 from util.math_funcs import sign
@@ -14,10 +14,10 @@ def stop_distance(car:Car, coast=False):
 
 def onside(car:Car, ball_location, threshold=350):
     goal_location = vec3(0, sign(car.team) * 5120, 0)
-    goal_to_ball = (ball_location - goal_location).normalized()
-    ball_dist = (ball_location - goal_location).length()
+    goal_to_ball = normalize(ball_location - goal_location)
+    ball_dist = norm(ball_location - goal_location)
     goal_to_car = car.position - goal_location
-    car_dist = dot(goal_to_ball, goal_to_car)
+    car_dist = dot(goal_to_car, goal_to_ball)
     return car_dist - threshold < ball_dist
 
 
@@ -28,7 +28,7 @@ def local(car:Car, target) -> vec3:
 def velocity_to_target(car:Car, target):
     local_target = local(car, target)
 
-    local_target_norm = local_target.normalized()
+    local_target_norm = normalize(local_target)
     try:
         vel_towards_target = dot(car.velocity, local_target_norm) / dot(local_target_norm, local_target_norm)
         # print("Velocity to target: (", vel_towards_target.x, ", ", vel_towards_target.y, ", ", vel_towards_target.z, ")")
@@ -37,12 +37,12 @@ def velocity_to_target(car:Car, target):
     return vel_towards_target
 
 
-def is_aligned_to_target(car:Car, target:vec3, return_angle=False):
+def is_aligned_to_target(car:Car, target:vec3, pi_ratio_div=100, return_angle=False):
     local_target = local(car, target)
     # print(normalize(local_target), " ", normalize(car.forward()))
     # angle = dot(normalize(local_target), normalize(car.forward()))
     angle = math.atan2(local_target.y, local_target.x)
-    if (-math.pi/100) <= angle < (math.pi/100):
+    if (-math.pi/pi_ratio_div) <= angle < (math.pi/pi_ratio_div):
         if return_angle:
             return True, angle
         return True
