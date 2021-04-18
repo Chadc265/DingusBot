@@ -1,6 +1,7 @@
 import random
 from rlbot.agents.base_agent import BaseAgent, SimpleControllerState
 from rlbot.utils.structures.game_data_struct import GameTickPacket, GameInfo
+from rlbot.utils.structures.ball_prediction_struct import BallPrediction
 from rlbot.utils.game_state_util import BallState, CarState, Physics, Vector3, Rotator
 from rlbot.utils.game_state_util import GameState as BotGameState
 from rlutilities.simulation import Car, Ball, Goal, Game, GameState
@@ -23,6 +24,7 @@ class Dingus(BaseAgent):
     def __init__(self, name, team, index):
         super().__init__(name, team, index)
         self.me: Car = None
+        self.game_cars = []
         self.ball: Ball = None
         self.action:Action = None
         self.game:Game = Game()
@@ -57,13 +59,14 @@ class Dingus(BaseAgent):
         self.game.read_packet(packet)
         if packet.game_info.is_kickoff_pause and packet.game_info.is_round_active:
             self.kickoff_flag = True
-        self.boost_tracker.update(packet)
+        # self.boost_tracker.update(packet)
         temp_time = self.game.time
         self.dt = temp_time - self.last_time
         self.last_time = temp_time
         self.me = self.game.cars[self.index]
         self.ball = self.game.ball
-
+        # self.ball_prediction = self.get_ball_prediction_struct()
+        self.game_cars = self.game.cars
 
     def get_output(self, packet: GameTickPacket) -> SimpleControllerState:
         self.preprocess(packet)
@@ -78,13 +81,23 @@ class Dingus(BaseAgent):
                 self.action = None
                 self.set_training_scenario()
             elif self.action is not None:
-                self.action.update_target_position(self.ball.position)
+                if self.action.arrival_time < 0 and self.dt > 0.0:
+                    print("dt: ", self.dt)
+                    arrival_time, target_pos = self.action.find_intersect_time_and_target(self.ball, 0.016666)
+                    print("target: ", target_pos)
+                    print("ball: ", self.ball.position)
+                    print("time: ", arrival_time)
+                    if arrival_time >= 0.0:
+                        self.action.arrival_time = arrival_time
+                        self.draw_point(self.action.target)
+                        # self.action.set_speed_for_arrival()
+                    self.action.target = target_pos
+                # self.action.target = self.ball.position
                 self.action.step(self.dt)
-                self.draw_point(self.action.target)
                 self.controls = self.action.controls
                 self.training_timer += self.dt
             else:
-                self.action = LayUp(self.game.cars[self.index], self.ball)
+                self.action = DriveAction(self.game_cars[self.index], self.ball.position)
 
             return self.controls
         ########################################
@@ -145,15 +158,15 @@ class Dingus(BaseAgent):
 
     def set_training_scenario(self):
         self.training_timer = 0.0
-        b_position = Vector3(random.uniform(-1500, 1500),
+        b_position = Vector3(random.uniform(1500, 3000),
                              random.uniform(-sign(self.team)*1000, -sign(self.team)*3500),
                              93)
-        c_position = Vector3(random.uniform(-1000, 1000),
+        c_position = Vector3(random.uniform(-2000, -1000),
                              random.uniform(sign(self.team) * 2000, sign(self.team)*1500),
                              25)
         ball_state = BallState(physics=Physics(
             location=b_position,
-            velocity=Vector3(0, 0, 0),
+            velocity=Vector3(-250, 0, 0),
             rotation=Rotator(0, 0, 0),
             angular_velocity=Vector3(0, 0, 0)
         ))
