@@ -1,3 +1,4 @@
+from math import pow, sqrt
 from rlbot.agents.base_agent import SimpleControllerState
 from rlutilities.linear_algebra import vec3, dot, normalize, norm
 from rlutilities.simulation import Car, Ball
@@ -43,26 +44,6 @@ class DriveAction(Drive):
     @property
     def car_on_wall(self):
         return not self.car_upright and self.car.on_ground
-
-    def find_intersect_time_and_target(self, ball: Ball, dt: float):
-        ball_copy = Ball(ball)
-        intersect_time = -1.0
-        target_pos = ball_copy.position
-        # check if they'll face without a large turn
-        for f in range(100):
-            ball_copy.step(dt)
-            ball_copy.step(dt)
-            # intersect_time = ball_copy.time
-            target_pos = ball_copy.position
-            simulation = self.simulate(vec3(target_pos), dt)
-            if norm(simulation.position - ball_copy.position) < 100:
-                ball_copy.step(dt)
-                ball_copy.step(dt)
-                intersect_time = ball_copy.time
-                print("intersect time: ", intersect_time)
-                target_pos = ball_copy.position
-                break
-        return intersect_time, target_pos
 
     def set_speed_for_arrival(self):
         if self.arrival_time < 0:
