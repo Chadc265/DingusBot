@@ -81,6 +81,7 @@ class DriveAction(Drive):
         super().step(dt)
         if not self.facing_target:
             self.controls.boost = False
+        self.finished = False
 
 
 class AerialAction(Aerial):

@@ -1,4 +1,6 @@
 import random
+
+import rlbot.utils.rendering.rendering_manager
 from rlbot.agents.base_agent import BaseAgent, SimpleControllerState
 from rlbot.utils.structures.game_data_struct import GameTickPacket, GameInfo
 from rlbot.utils.structures.ball_prediction_struct import BallPrediction
@@ -15,6 +17,7 @@ from driving.layup import LayUp
 from kickoffs.base_kickoff import BaseKickoff
 from kickoffs.single_jump_kickoff import SingleJumpKickoff
 from kickoffs.dodge_kickoff import DodgeKickoff
+from shooting.shot import Shot
 from util.boost import Boost, BoostTracker
 from util.math_funcs import sign
 
@@ -37,6 +40,7 @@ class Dingus(BaseAgent):
         self.simulation_step = 0.01666
         self.counter = 0
         self.training_timer = 0.0
+        self.shot = None
         ####################################
         self.training_flag = True
         ####################################
@@ -71,6 +75,7 @@ class Dingus(BaseAgent):
     def get_output(self, packet: GameTickPacket) -> SimpleControllerState:
         self.preprocess(packet)
         self.controls = SimpleControllerState()
+        self.renderer.begin_rendering()
         ########################################
         ########################################
         if self.training_flag:
@@ -81,24 +86,35 @@ class Dingus(BaseAgent):
                 self.action = None
                 self.set_training_scenario()
             elif self.action is not None:
-                if self.action.arrival_time < 0 and self.dt > 0.0:
-                    print("dt: ", self.dt)
-                    arrival_time, target_pos = self.action.find_intersect_time_and_target(self.ball, 0.016666)
-                    print("target: ", target_pos)
-                    print("ball: ", self.ball.position)
-                    print("time: ", arrival_time)
-                    if arrival_time >= 0.0:
-                        self.action.arrival_time = arrival_time
-                        self.draw_point(self.action.target)
-                        # self.action.set_speed_for_arrival()
-                    self.action.target = target_pos
                 # self.action.target = self.ball.position
+                self.draw_point(self.action.target, color=self.renderer.green())
                 self.action.step(self.dt)
                 self.controls = self.action.controls
+                # self.controls.throttle = 0
                 self.training_timer += self.dt
             else:
                 self.action = DriveAction(self.game_cars[self.index], self.ball.position)
-
+                my_sign = sign(self.game_cars[self.index].team)
+                left_post = vec3(-my_sign * 800, -my_sign * 5120, 90)
+                right_post = vec3(my_sign * 800, -my_sign * 5120, 90)
+                self.shot = Shot(self.ball.position, left_post, right_post)
+                num = random.uniform(0, 2)
+                if num < 1:
+                    print("aiming left")
+                    self.action.target = self.shot.left_shot
+                elif num > 1:
+                    print("aiming right")
+                    self.action.target = self.shot.right_shot
+                else:
+                    print("aiming center")
+                    self.action.target = self.shot.mid_shot
+            my_sign = sign(self.game_cars[self.index].team)
+            left_post = vec3(-my_sign * 800, -my_sign * 5120, 90)
+            right_post = vec3(my_sign * 800, -my_sign * 5120, 90)
+            self.draw_point(right_post, color=self.renderer.red())
+            self.draw_point(left_post, color=self.renderer.blue())
+            # self.renderer.draw_line_3d(self.action.target, , self.renderer.red())
+            self.renderer.end_rendering()
             return self.controls
         ########################################
         ########################################
@@ -138,35 +154,37 @@ class Dingus(BaseAgent):
         self.renderer.draw_string_2d(10, 50, 3, 3, text, white)
         self.renderer.end_rendering()
 
-    def draw_point(self, point):
+    def draw_point(self, point, color: rlbot.utils.rendering.rendering_manager.Color = None):
         r = 200
-        self.renderer.begin_rendering()
-        purple = self.renderer.create_color(255, 230, 30, 230)
+
+        if color is None:
+            color = self.renderer.create_color(255, 230, 30, 230)
 
         self.renderer.draw_line_3d(point - r * vec3(1, 0, 0),
                                    point + r * vec3(1, 0, 0),
-                                   purple)
+                                   color)
 
         self.renderer.draw_line_3d(point - r * vec3(0, 1, 0),
                                    point + r * vec3(0, 1, 0),
-                                   purple)
+                                   color)
 
         self.renderer.draw_line_3d(point - r * vec3(0, 0, 1),
                                    point + r * vec3(0, 0, 1),
-                                   purple)
-        self.renderer.end_rendering()
+                                   color)
+
 
     def set_training_scenario(self):
         self.training_timer = 0.0
-        b_position = Vector3(random.uniform(1500, 3000),
-                             random.uniform(-sign(self.team)*1000, -sign(self.team)*3500),
+        # random.uniform(-250, 250)
+        b_position = Vector3(0,
+                             random.uniform(-sign(self.team)*3500, -sign(self.team)*4000),
                              93)
-        c_position = Vector3(random.uniform(-2000, -1000),
+        c_position = Vector3(0,
                              random.uniform(sign(self.team) * 2000, sign(self.team)*1500),
                              25)
         ball_state = BallState(physics=Physics(
             location=b_position,
-            velocity=Vector3(-250, 0, 0),
+            velocity=Vector3(0, 0, 0),
             rotation=Rotator(0, 0, 0),
             angular_velocity=Vector3(0, 0, 0)
         ))
