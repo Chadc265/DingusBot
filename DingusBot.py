@@ -88,6 +88,8 @@ class Dingus(BaseAgent):
             elif self.action is not None:
                 # self.action.target = self.ball.position
                 self.draw_point(self.action.target, color=self.renderer.green())
+                self.shot.update(self.ball)
+                self.action.target = self.shot.current_target
                 self.action.step(self.dt)
                 self.controls = self.action.controls
                 # self.controls.throttle = 0
@@ -97,7 +99,7 @@ class Dingus(BaseAgent):
                 my_sign = sign(self.game_cars[self.index].team)
                 left_post = vec3(-my_sign * 800, -my_sign * 5120, 90)
                 right_post = vec3(my_sign * 800, -my_sign * 5120, 90)
-                self.shot = Shot(self.ball.position, left_post, right_post)
+                self.shot = Shot(self.ball, left_post, right_post)
                 num = random.uniform(0, 2)
                 if num < 1:
                     print("aiming left")
@@ -177,14 +179,14 @@ class Dingus(BaseAgent):
         self.training_timer = 0.0
         # random.uniform(-250, 250)
         b_position = Vector3(0,
-                             random.uniform(-sign(self.team)*3500, -sign(self.team)*4000),
+                             random.uniform(-sign(self.team)*3000, -sign(self.team)*3500),
                              93)
         c_position = Vector3(0,
                              random.uniform(sign(self.team) * 2000, sign(self.team)*1500),
                              25)
         ball_state = BallState(physics=Physics(
             location=b_position,
-            velocity=Vector3(0, 0, 0),
+            velocity=Vector3(-sign(self.team)*100, -sign(self.team)*100, 0),
             rotation=Rotator(0, 0, 0),
             angular_velocity=Vector3(0, 0, 0)
         ))

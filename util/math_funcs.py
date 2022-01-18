@@ -1,6 +1,6 @@
 import math
 from util.constants import *
-from rlutilities.linear_algebra import vec3, dot, cross
+from rlutilities.linear_algebra import vec2, vec3, dot, cross
 
 # Mostly from Gosling utils and PythonExample
 
@@ -79,3 +79,6 @@ def max_turn_speed(turn_radius_max):
     if turn_radius_max < 1 / 0.0007999:
         return 2500.0
     return 0.0
+
+def cross2d(left: vec2, right: vec2):
+    return left.x * right.y - left.y * right.x
