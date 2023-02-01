@@ -4,7 +4,7 @@ from rlutilities.linear_algebra import vec3, dot, normalize, norm
 from rlutilities.simulation import Car, Ball
 from rlutilities.mechanics import Drive, Aerial
 from util.math_funcs import clamp
-from util.car_util import onside
+from util.car_util import onside, stop_distance
 from util.constants import MAX_DRIVING_SPEED, GRAVITY, BOOST_ACCELERATION
 class Action:
     def __init__(self, car:Car):
@@ -33,9 +33,16 @@ class DriveAction(Drive):
             return False
 
     @property
+    def car_to_target(self):
+        return self.target - self.car.position
+
+    @property
+    def dist_to_target(self):
+        return norm(self.car_to_target)
+
+    @property
     def facing_target(self):
-        car_to_target = self.target - self.car.position
-        return dot(self.car.forward(), normalize(car_to_target)) > 0.9
+        return dot(self.car.forward(), normalize(self.car_to_target)) > 0.9
 
     @property
     def car_upright(self):
@@ -45,22 +52,23 @@ class DriveAction(Drive):
     def car_on_wall(self):
         return not self.car_upright and self.car.on_ground
 
-    def set_speed_for_arrival(self):
-        if self.arrival_time < 0:
-            return
-        self.reaction_time = self.arrival_time - self.car.time
 
-    def set_throttle_for_arrival(self, dt:float):
-        t = self.arrival_time - self.car.time
-        pos_future = self.car.position + self.car.velocity * t + 0.5 * GRAVITY * t * t
-        delta_pos = self.target - pos_future
-        vel_for = dot(delta_pos, self.car.forward())
-        instant_accel = vel_for / t
-        if instant_accel > 2 * BOOST_ACCELERATION * dt:
-            self.controls.boost = True
-        else:
-            self.controls.boost = False
-            self.controls.throttle = clamp(instant_accel / self.throttle_accel(vel_for), 0.02, 1.0)
+    # def set_speed_for_arrival(self):
+    #     if self.arrival_time < 0:
+    #         return
+    #     self.reaction_time = self.arrival_time - self.car.time
+    #
+    # def set_throttle_for_arrival(self, dt:float):
+    #     t = self.arrival_time - self.car.time
+    #     pos_future = self.car.position + self.car.velocity * t + 0.5 * GRAVITY * t * t
+    #     delta_pos = self.target - pos_future
+    #     vel_for = dot(delta_pos, self.car.forward())
+    #     instant_accel = vel_for / t
+    #     if instant_accel > 2 * BOOST_ACCELERATION * dt:
+    #         self.controls.boost = True
+    #     else:
+    #         self.controls.boost = False
+    #         self.controls.throttle = clamp(instant_accel / self.throttle_accel(vel_for), 0.02, 1.0)
 
     def simulate(self, sim_target: vec3, dt: float):
         car = Car(self.car)
@@ -76,6 +84,13 @@ class DriveAction(Drive):
 
     def car_onside(self, ball_position):
         return onside(self.car, ball_position)
+
+    # def set_controls(self):
+    #     if self.dist_to_target > stop_distance(self.car, False):
+    #         self.controls.throttle = self.controls.throttle - 0.1
+    #     else:
+    #         self.controls.throttle = 1
+
 
     def step(self, dt:float):
         super().step(dt)

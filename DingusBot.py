@@ -1,3 +1,4 @@
+import math
 import random
 
 import rlbot.utils.rendering.rendering_manager
@@ -79,12 +80,15 @@ class Dingus(BaseAgent):
         ########################################
         ########################################
         if self.training_flag:
+
             if self.action is not None and self.action.finished:
                 self.action = None
                 self.set_training_scenario()
+                print('Set training scenario after action finished')
             elif self.training_timer > 10:
                 self.action = None
                 self.set_training_scenario()
+                print('Set training scenario after reset')
             elif self.action is not None:
                 # self.action.target = self.ball.position
                 self.draw_point(self.action.target, color=self.renderer.green())
@@ -92,10 +96,11 @@ class Dingus(BaseAgent):
                 self.action.target = self.shot.current_target
                 self.action.step(self.dt)
                 self.controls = self.action.controls
+
                 # self.controls.throttle = 0
                 self.training_timer += self.dt
             else:
-                self.action = DriveAction(self.game_cars[self.index], self.ball.position)
+                self.action = LayUp(self.game_cars[self.index], self.ball)
                 my_sign = sign(self.game_cars[self.index].team)
                 left_post = vec3(-my_sign * 800, -my_sign * 5120, 90)
                 right_post = vec3(my_sign * 800, -my_sign * 5120, 90)
@@ -186,14 +191,14 @@ class Dingus(BaseAgent):
                              25)
         ball_state = BallState(physics=Physics(
             location=b_position,
-            velocity=Vector3(-sign(self.team)*100, -sign(self.team)*100, 0),
+            velocity=Vector3(0, 0, 0),
             rotation=Rotator(0, 0, 0),
             angular_velocity=Vector3(0, 0, 0)
         ))
         car_state = CarState(physics=Physics(
             location=c_position,
             velocity=Vector3(0, 0, 0),
-            rotation=Rotator(0, 0, 0),
+            rotation=Rotator(0, math.pi / 2, 0),
             angular_velocity=Vector3(0, 0, 0)
         ), boost_amount=100)
         self.set_game_state(BotGameState(

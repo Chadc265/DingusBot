@@ -13,12 +13,7 @@ class DecisionMaker:
         self.agent_team = team
         self.car_intersect_times = []
 
-    def times_to_first_touch(self, cars: list[Car], ball: Ball, dt: float):
-        pass
 
-    def locate_first_touch_opportunity(self, cars: list[Car], ball_prediction: BallPrediction):
-        ball_location = vec3(ball_prediction.slices[0].physics.location)
-        pass
 
 
 

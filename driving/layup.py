@@ -11,12 +11,12 @@ class LayUp(DriveAction):
     def __init__(self, car:Car, ball: Ball):
         super().__init__(car, ball.position)
         self.ball_position = ball.position
+        self.shot_target = vec3(clamp(self.ball_position.x) * 500, -sign(self.car.team) * 5120, 0)
         self.line_up_target = self.get_line_up_position()
         self.target = self.line_up_target
         self.shot_contact_offset = self.get_shot_contact_offset()
         self.in_line_frames = 0
         self.stage = 0
-        self.shot_target = vec3(clamp(self.ball_position.x) * 500, -sign(self.car.team) * 5120, 0)
 
 
     @property
@@ -54,7 +54,10 @@ class LayUp(DriveAction):
         self.ball_position = ball_position
 
     def get_shot_contact_offset(self):
-
+        try:
+            print('Shot offset: '.format(self.shot_target))
+        except:
+            return vec3(0,0,0)
         ball_to_goal = normalize(self.shot_target - self.ball_position)
         offset = clamp_in_field(ball_to_goal * 50)
         return vec3(offset.x, offset.y, 0)
@@ -66,15 +69,9 @@ class LayUp(DriveAction):
         return vec3(new_target.x, new_target.y, 0)
 
     def step(self, dt:float):
-        print("Stage: ", self.stage)
-        next_stage = self.stage
-        # just drive to target in case turn needs to happen
-        print(norm(self.distance_remaining))
-        if self.stage == 0:
-            if norm(self.target - self.car.position) <= 100:
-                next_stage = 1
-                self.target = self.ball_position - self.get_shot_contact_offset()
-        self.stage = next_stage
+        print('Target: {0}'.format(self.target))
+        print('Car position: {0}'.format(self.car.position))
+        self.target = self.ball_position - self.get_shot_contact_offset()
         super().step(dt)
         if not self.car.on_ground:
             self.controls.boost = False
